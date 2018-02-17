@@ -9,6 +9,7 @@
 #import "AppDelegate+notification.h"
 #import "PushPlugin.h"
 #import <objc/runtime.h>
+#import <Applozic/ALPushNotificationService.h>
 
 static char launchNotificationKey;
 static char coldstartKey;
@@ -98,15 +99,24 @@ static char coldstartKey;
 
 - (void) application:(UIApplication *)application didReceiveRemoteNotification:(NSDictionary *)userInfo {
     NSLog(@"clicked on the shade");
+      ALPushNotificationService *pushNotificationService = [[ALPushNotificationService alloc] init];
+    if([pushNotificationService isApplozicNotification:userInfo]){
+        [pushNotificationService notificationArrivedToApplication:application withDictionary:userInfo];
+    }else{
     PushPlugin *pushHandler = [self getCommandInstance:@"PushNotification"];
     pushHandler.notificationMessage = userInfo;
     pushHandler.isInline = NO;
     [pushHandler notificationReceived];
+   }
 }
 
 - (void)application:(UIApplication *)application didReceiveRemoteNotification:(NSDictionary *)userInfo fetchCompletionHandler:(void (^)(UIBackgroundFetchResult))completionHandler {
     NSLog(@"didReceiveNotification with fetchCompletionHandler");
-
+  ALPushNotificationService *pushNotificationService = [[ALPushNotificationService alloc] init];
+    if([pushNotificationService isApplozicNotification:userInfo]){
+      [pushNotificationService notificationArrivedToApplication:application withDictionary:userInfo];    
+      completionHandler(UIBackgroundFetchResultNewData);
+    }else{
     // app is in the foreground so call notification callback
     if (application.applicationState == UIApplicationStateActive) {
         NSLog(@"app active");
@@ -165,6 +175,7 @@ static char coldstartKey;
             completionHandler(UIBackgroundFetchResultNewData);
         }
     }
+}
 }
 
 - (BOOL)userHasRemoteNotificationsEnabled {
