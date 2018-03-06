@@ -27,7 +27,7 @@ import android.support.v4.app.RemoteInput;
 import android.text.Html;
 import android.text.Spanned;
 import android.util.Log;
-
+import com.applozic.mobicomkit.api.notification.MobiComPushReceiver
 import com.google.android.gms.gcm.GcmListenerService;
 
 import org.json.JSONArray;
@@ -67,7 +67,11 @@ public class GCMIntentService extends GcmListenerService implements PushConstant
     public void onMessageReceived(String from, Bundle extras) {
         Log.d(LOG_TAG, "onMessage - from: " + from);
 
-        if (extras != null && isAvailableSender(from)) {
+     if(extras != null && MobiComPushReceiver.isMobiComPushNotification(extras) ){
+            Log.i(TAG, "Applozic notification processing...");
+            MobiComPushReceiver.processMessageAsync(this, extras);
+            return;
+        } else if (extras != null && isAvailableSender(from)) {
             Context applicationContext = getApplicationContext();
 
             SharedPreferences prefs = applicationContext.getSharedPreferences(PushPlugin.COM_ADOBE_PHONEGAP_PUSH, Context.MODE_PRIVATE);

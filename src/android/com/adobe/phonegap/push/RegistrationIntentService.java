@@ -11,6 +11,11 @@ import com.google.android.gms.gcm.GoogleCloudMessaging;
 import com.google.android.gms.iid.InstanceID;
 
 import java.io.IOException;
+import com.applozic.mobicomkit.Applozic;
+import com.applozic.mobicomkit.api.account.register.RegisterUserClientService;
+import com.applozic.mobicomkit.api.account.register.RegistrationResponse;
+import com.applozic.mobicomkit.api.account.user.MobiComUserPreference;
+
 
 public class RegistrationIntentService extends IntentService implements PushConstants {
     public static final String LOG_TAG = "Push_RegistrationIntent";
@@ -28,6 +33,15 @@ public class RegistrationIntentService extends IntentService implements PushCons
             String senderID = sharedPreferences.getString(SENDER_ID, "");
             String token = instanceID.getToken(senderID,
                     GoogleCloudMessaging.INSTANCE_ID_SCOPE, null);
+
+        Applozic.getInstance(this).setDeviceRegistrationId(token);
+        if (MobiComUserPreference.getInstance(this).isRegistered()) {
+            try {
+                RegistrationResponse registrationResponse = new RegisterUserClientService(this).updatePushNotificationId(token);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
             PushPlugin.setRegistrationID(token);
             Log.i(LOG_TAG, "new GCM Registration Token: " + token);
 

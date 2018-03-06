@@ -9,6 +9,8 @@
 #import "AppDelegate+notification.h"
 #import "PushPlugin.h"
 #import <objc/runtime.h>
+#import <Applozic/Applozic.h>
+
 
 static char launchNotificationKey;
 static char coldstartKey;
@@ -89,6 +91,32 @@ static char coldstartKey;
 - (void)application:(UIApplication *)application didRegisterForRemoteNotificationsWithDeviceToken:(NSData *)deviceToken {
     PushPlugin *pushHandler = [self getCommandInstance:@"PushNotification"];
     [pushHandler didRegisterForRemoteNotificationsWithDeviceToken:deviceToken];
+      const unsigned *tokenBytes = [deviceToken bytes];
+      
+    NSString *hexToken = [NSString stringWithFormat:@"%08x%08x%08x%08x%08x%08x%08x%08x",
+                          ntohl(tokenBytes[0]), ntohl(tokenBytes[1]), ntohl(tokenBytes[2]),
+                          ntohl(tokenBytes[3]), ntohl(tokenBytes[4]), ntohl(tokenBytes[5]),
+                          ntohl(tokenBytes[6]), ntohl(tokenBytes[7])];
+    
+    NSString *apnDeviceToken = hexToken;
+    NSLog(@"APN_DEVICE_TOKEN :: %@", hexToken);
+    
+    if ([[ALUserDefaultsHandler getApnDeviceToken] isEqualToString:apnDeviceToken])
+    {
+        return;
+    }
+    
+    ALRegisterUserClientService *registerUserClientService = [[ALRegisterUserClientService alloc] init];
+    [registerUserClientService updateApnDeviceTokenWithCompletion:apnDeviceToken withCompletion:^(ALRegistrationResponse *rResponse, NSError *error) {
+        
+        if (error)
+        {
+            NSLog(@"REGISTRATION ERROR :: %@",error.description);
+            return;
+        }
+        
+        NSLog(@"Registration response from server : %@", rResponse);
+    }];
 }
 
 - (void)application:(UIApplication *)application didFailToRegisterForRemoteNotificationsWithError:(NSError *)error {
@@ -98,16 +126,28 @@ static char coldstartKey;
 
 - (void) application:(UIApplication *)application didReceiveRemoteNotification:(NSDictionary *)userInfo {
     NSLog(@"clicked on the shade");
+
+   ALPushNotificationService *pushNotificationService = [[ALPushNotificationService alloc] init];
+    if([pushNotificationService isApplozicNotification:userInfo]){
+        [pushNotificationService notificationArrivedToApplication:application withDictionary:userInfo];
+    }else{
     PushPlugin *pushHandler = [self getCommandInstance:@"PushNotification"];
     pushHandler.notificationMessage = userInfo;
     pushHandler.isInline = NO;
     [pushHandler notificationReceived];
+  }
 }
 
 - (void)application:(UIApplication *)application didReceiveRemoteNotification:(NSDictionary *)userInfo fetchCompletionHandler:(void (^)(UIBackgroundFetchResult))completionHandler {
     NSLog(@"didReceiveNotification with fetchCompletionHandler");
 
     // app is in the foreground so call notification callback
+
+     ALPushNotificationService *pushNotificationService = [[ALPushNotificationService alloc] init];
+    if([pushNotificationService isApplozicNotification:userInfo]){
+      [pushNotificationService notificationArrivedToApplication:application withDictionary:userInfo];    
+      completionHandler(UIBackgroundFetchResultNewData);
+    }else{
     if (application.applicationState == UIApplicationStateActive) {
         NSLog(@"app active");
         PushPlugin *pushHandler = [self getCommandInstance:@"PushNotification"];
@@ -165,6 +205,8 @@ static char coldstartKey;
             completionHandler(UIBackgroundFetchResultNewData);
         }
     }
+
+  }
 }
 
 - (BOOL)userHasRemoteNotificationsEnabled {
