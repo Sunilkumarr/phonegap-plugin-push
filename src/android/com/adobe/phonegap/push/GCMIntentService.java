@@ -68,7 +68,6 @@ public class GCMIntentService extends GcmListenerService implements PushConstant
         Log.d(LOG_TAG, "onMessage - from: " + from);
 
      if(extras != null && MobiComPushReceiver.isMobiComPushNotification(extras) ){
-            Log.i(TAG, "Applozic notification processing...");
             MobiComPushReceiver.processMessageAsync(this, extras);
             return;
         } else if (extras != null && isAvailableSender(from)) {
